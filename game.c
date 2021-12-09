@@ -6,7 +6,8 @@
 #fuses NOPUT, NOBROWNOUT, NOWDT, NODEBUG
 #use delay (clock=16MHz)
 
-#define boolean int8
+#define int8 char
+#define boolean char
 #define true 1
 #define false 0
 
@@ -47,6 +48,7 @@ Answer generateNextAnswer(Answer, int);
 Answer getUserAnswer(int);
 boolean checkAnswers(Answer, Answer);
 boolean contains(int8 list[], int8 value, int size);
+boolean isGameFinished(int);
 
 // ** Procedimentos de entrada e saída** // 
 void waitClearInputs();
@@ -58,6 +60,7 @@ void showLedsState(int8 state);
 // ** Procedimentos de animações ** //
 void showWrongAnswerAnim();
 void showCorrentAnswerAnim();
+void showGameFinishedAnim();
 
 // Usando vetor ao invés de define para evitar funções com muitos ifs 
 int ledsFlags[] = {
@@ -146,16 +149,21 @@ void main() {
    clearGame(&gameState);
 
    while(true) {
+      if (isGameFinished(gameState.currentGameStep)) {
+         showGameFinishedAnim();
+         clearGame(&gameState);
+      }
+
       if (!gameState.isGameStarted) {
          getInput();
          startGame(&gameState);
       }
 
       Answer newAnswer = generateNextAnswer(gameState.currentAnswer, gameState.currentGameStep);
+      updateGameCurrentAnswer(&gameState, newAnswer);
       showAnswer(newAnswer);
       Answer userAnswer = getUserAnswer(gameState.currentGameStep);
       boolean isCorrentUserAnswer = checkAnswers(userAnswer, newAnswer);
-      updateGameCurrentAnswer(&gameState, newAnswer);
       
       if (isCorrentUserAnswer) {
          showCorrentAnswerAnim();
@@ -178,9 +186,6 @@ void startGame(State* gameState) {
 }
 
 void goToNextStep(State* gameState) {
-   if (gameState->currentGameStep == MAX_GAME_STEPS) {
-      return;
-   }
    gameState->currentGameStep++;
 }
 
@@ -252,6 +257,14 @@ boolean checkAnswers(Answer a, Answer b) {
    return true;
 }
 
+boolean isGameFinished(int currentGameStep) {
+   if (currentGameStep > MAX_GAME_STEPS) {
+      return true;
+   } else {
+      return false;
+   }
+}
+
 // ** Procedimentos de entrada e saída** // 
 
 void waitClearInputs() {
@@ -279,6 +292,7 @@ void showAnswer(Answer answer) {
 void showLedsStatesWithInterval(int8 ledsStates[], int size, int delay) {
    int i;
    
+   showLedsState(NO_LEDS_FLAG);
    delay_ms(delay);
    for (i = 0; i < size; i++) {
       int8 ledsState = ledsStates[i];
@@ -338,3 +352,13 @@ void showWrongAnswerAnim() {
    delay_ms(300);
 }
 
+void showGameFinishedAnim() {
+   showLedsStates(fillingLeftToRight, 9, 500);
+   showLedsStates(cleaningLeftToRight, 9, 100);
+   showLedsStates(fillingRightToLeft, 9, 25);
+   showLedsStates(cleaningRightToLeft, 9, 25);
+   showLedsStates(fillingLeftToRight, 9, 7);
+   showLedsStates(cleaningLeftToRight, 9, 7);
+   showLedsStates(fillingRightToLeft, 9, 7);
+   showLedsStates(cleaningRightToLeft, 9, 7);
+}
